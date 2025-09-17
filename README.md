@@ -21,7 +21,7 @@ A seguir, os passos para a preparação do projeto:
 
 # Projeto: *<Nome_do_seu_Projeto>*
 
-# Grupo: *<Nome_do_seu_Grupo>*
+# Grupo: *Pedro²*
 
 # Descrição
 
