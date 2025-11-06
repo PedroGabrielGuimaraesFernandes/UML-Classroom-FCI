@@ -1,0 +1,235 @@
+public interface Validavel {
+    boolean validar();
+}
+
+public abstract class Entidade {
+    protected String id;
+
+    public Entidade(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("ID inválido.");
+        }
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+}
+
+public class Endereco extends Entidade implements Validavel {
+    private String cidade;
+    private String estado;
+    private String cep;
+    private String rua;
+    private String numero;
+    private String complemento;
+
+    public Endereco(String id, String cidade, String estado, String cep,
+                    String rua, String numero, String complemento) {
+        super(id);
+        this.cidade = cidade;
+        this.estado = estado;
+        this.cep = cep;
+        this.rua = rua;
+        this.numero = numero;
+        this.complemento = complemento;
+    }
+
+    @Override
+    public boolean validar() {
+        return cep != null && cep.matches("\\d{5}-?\\d{3}");
+    }
+}
+
+import java.util.*;
+
+public abstract class UsuarioBase extends Entidade implements Validavel {
+    protected String nome;
+    protected String email;
+    protected String telefone;
+    protected Date dataCadastro;
+    protected Endereco endereco;
+    protected List<Pedido> historicoPedidos = new ArrayList<>();
+
+    public UsuarioBase(String id, String nome, String email, String telefone, Endereco endereco) {
+        super(id);
+        this.nome = nome;
+        this.email = email;
+        this.telefone = telefone;
+        this.endereco = endereco;
+        this.dataCadastro = new Date();
+    }
+
+    public List<Pedido> consultarHistorico() {
+        return historicoPedidos;
+    }
+}
+
+public class Usuario extends UsuarioBase {
+
+    public Usuario(String id, String nome, String email, String telefone, Endereco endereco) {
+        super(id, nome, email, telefone, endereco);
+    }
+
+    @Override
+    public boolean validar() {
+        return email != null && email.contains("@") && telefone.length() >= 8;
+    }
+
+    public Pedido solicitarEntrega(Pedido pedido) {
+        if (pedido == null) {
+            throw new IllegalArgumentException("Pedido inválido.");
+        }
+        historicoPedidos.add(pedido);
+        return pedido;
+    }
+}
+
+public class Localizacao {
+    private double latitude;
+    private double longitude;
+
+    public Localizacao(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public void atualizarLocalizacao(double novaLat, double novaLong) {
+        this.latitude = novaLat;
+        this.longitude = novaLong;
+    }
+}
+
+public interface Rastreavel {
+    void atualizarStatus(String novoStatus);
+}
+
+
+import java.util.*;
+
+public class Drone extends Entidade implements Validavel, Rastreavel {
+    private String modelo;
+    private float capacidadeDeCarga;
+    private int bateria;
+    private boolean livre;
+    private Localizacao localizacaoAtual;
+    private List<Entrega> historico = new ArrayList<>();
+
+    public Drone(String id, String modelo, float capacidadeDeCarga, int bateria, Localizacao localizacaoAtual) {
+        super(id);
+        this.modelo = modelo;
+        this.capacidadeDeCarga = capacidadeDeCarga;
+        this.bateria = bateria;
+        this.localizacaoAtual = localizacaoAtual;
+        this.livre = true;
+    }
+
+    public boolean verificarDisponibilidade() {
+        return livre && bateria > 20;
+    }
+
+    public float calcularAutonomia() {
+        return bateria * 0.8f; // Exemplo simples
+    }
+
+    @Override
+    public boolean validar() {
+        return capacidadeDeCarga > 0 && bateria >= 0 && bateria <= 100;
+    }
+
+    @Override
+    public void atualizarStatus(String novoStatus) {
+        System.out.println("Status do drone " + id + ": " + novoStatus);
+    }
+}
+
+import java.util.*;
+
+public class Pedido extends Entidade implements Validavel {
+    private Usuario cliente;
+    private Endereco origem;
+    private Endereco destino;
+    private float peso;
+    private Date dataPedido;
+    private Drone droneAssociado;
+    private boolean entregue;
+    private List<Entrega> entregas = new ArrayList<>();
+
+    public Pedido(String id, Usuario cliente, Endereco origem, Endereco destino, float peso) {
+        super(id);
+        this.cliente = cliente;
+        this.origem = origem;
+        this.destino = destino;
+        this.peso = peso;
+        this.dataPedido = new Date();
+        this.entregue = false;
+    }
+
+    public boolean validarPeso() {
+        return peso > 0 && peso <= 20;
+    }
+
+    public float calcularCusto() {
+        return peso * 5.0f; // custo por kg
+    }
+
+    @Override
+    public boolean validar() {
+        return cliente != null && origem.validar() && destino.validar() && validarPeso();
+    }
+}
+
+import java.util.Date;
+
+public class Entrega extends Entidade {
+    private Pedido pedido;
+    private Drone drone;
+    private Endereco endereco;
+    private Date inicio;
+    private Date fim;
+    private String observacoes;
+
+    public Entrega(String id, Pedido pedido, Drone drone, Endereco endereco) {
+        super(id);
+        this.pedido = pedido;
+        this.drone = drone;
+        this.endereco = endereco;
+        this.inicio = new Date();
+    }
+
+    public void registrarInicio() {
+        this.inicio = new Date();
+    }
+
+    public void registrarFim(String obs) {
+        this.fim = new Date();
+        this.observacoes = obs;
+    }
+}
+
+import java.util.*;
+
+public class GerenciadorDrones {
+    private List<Drone> frota = new ArrayList<>();
+
+    public void adicionarDrone(Drone drone) {
+        frota.add(drone);
+    }
+
+    public Drone encontrarDroneDisponivel() {
+        return frota.stream()
+                    .filter(Drone::verificarDisponibilidade)
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Nenhum drone disponível."));
+    }
+
+    public void monitorarFrota() {
+        frota.forEach(d -> d.atualizarStatus("Monitorando posição atual."));
+    }
+
+    public void tratarDroneIndisponivel(Drone d) {
+        d.atualizarStatus("Indisponível para entrega.");
+    }
+}
+
